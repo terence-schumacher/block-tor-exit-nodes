@@ -1,5 +1,6 @@
 """
-Block TOR exit nodes (SRE-1097).
+Block TOR exit nodes.
+
 - Fetcher: run via `tor-exit-fetch` or `python -m tor_exit_block.fetcher`
 - Middleware: use TorExitBlockMiddleware (WSGI) or wrap_flask_app (Flask)
 """

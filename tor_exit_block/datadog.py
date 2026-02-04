@@ -1,20 +1,26 @@
 """
 Datadog metrics and events (optional; no-op if DD_API_KEY is not set).
+
 Fetcher: list size, list age, fetch success/failure.
-Middleware: block events (client IP, path, timestamp).
+Middleware: block events (client IP, path).
 """
 
+import json
 import os
 import time
 import urllib.request
-import urllib.error
-import json
 
 DD_API_KEY = os.environ.get("DD_API_KEY")
 METRIC_PREFIX = "tor_exit_block"
+DATADOG_SERIES_URL = "https://api.datadoghq.com/api/v1/series"
+DATADOG_EVENTS_URL = "https://api.datadoghq.com/api/v1/events"
+HTTP_TIMEOUT_SECONDS = 10
+HTTP_SUCCESS_MIN = 200
+HTTP_SUCCESS_MAX_EXCLUSIVE = 300
 
 
 def _is_configured() -> bool:
+    """Return True if Datadog API key is set."""
     return bool(DD_API_KEY)
 
 
@@ -33,8 +39,8 @@ def _post(url: str, data: dict[str, object]) -> bool:
             },
             method="POST",
         )
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            return bool(200 <= resp.status < 300)
+        with urllib.request.urlopen(req, timeout=HTTP_TIMEOUT_SECONDS) as resp:
+            return bool(HTTP_SUCCESS_MIN <= resp.status < HTTP_SUCCESS_MAX_EXCLUSIVE)
     except Exception as e:
         print(f"Datadog request error: {e}", flush=True)
         return False
@@ -43,7 +49,7 @@ def _post(url: str, data: dict[str, object]) -> bool:
 def gauge(name: str, value: float, tags: list[str] | None = None) -> bool:
     """Emit a gauge metric to Datadog."""
     return _post(
-        "https://api.datadoghq.com/api/v1/series",
+        DATADOG_SERIES_URL,
         {
             "series": [
                 {
@@ -66,7 +72,7 @@ def event(
 ) -> bool:
     """Emit an event to Datadog."""
     return _post(
-        "https://api.datadoghq.com/api/v1/events",
+        DATADOG_EVENTS_URL,
         {
             "title": title,
             "text": text,

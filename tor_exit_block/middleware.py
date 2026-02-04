@@ -1,6 +1,7 @@
 """
 WSGI middleware: block requests whose client IP is in the TOR exit list.
-Returns 403 with generic body; emits block event to Datadog.
+
+Returns 403 with a generic body and emits a block event to Datadog when configured.
 """
 
 import os
@@ -14,8 +15,10 @@ from .datadog import emit_block_event
 
 DEFAULT_403_BODY = "Access denied."
 DEFAULT_LIST_PATH = str(Path.cwd() / "data" / "tor-exit-nodes.txt")
+CONTENT_TYPE_PLAIN_UTF8 = "text/plain; charset=utf-8"
+STATUS_FORBIDDEN = "403 Forbidden"
 
-# Module-level cache
+# Module-level cache for the blocklist (path + mtime invalidation).
 _cached_set: set[str] | None = None
 _cached_path: str | None = None
 _last_load_time: float = 0.0
@@ -86,13 +89,11 @@ class TorExitBlockMiddleware:
             return self.app(environ, start_response)
 
         if client_ip in ips:
-            path = environ.get("PATH_INFO", "") or environ.get("REQUEST_URI", "")
-            emit_block_event(client_ip=client_ip, path=path)
+            request_path = environ.get("PATH_INFO", "") or environ.get("REQUEST_URI", "")
+            emit_block_event(client_ip=client_ip, path=request_path)
             if self.monitor_only:
                 return self.app(environ, start_response)
-            status = "403 Forbidden"
-            headers = [("Content-Type", "text/plain; charset=utf-8")]
-            start_response(status, headers)
+            start_response(STATUS_FORBIDDEN, [("Content-Type", CONTENT_TYPE_PLAIN_UTF8)])
             return [self.blocked_body]
 
         return self.app(environ, start_response)

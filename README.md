@@ -1,8 +1,8 @@
-# block-tor-exit-nodes (SRE-1097)
+# block-tor-exit-nodes
 
 Block app access from known TOR exit nodes for production. **Phased rollout:**
 
-- **Phase 1 (immediate):** Block TOR at **Cloudflare** (security rules, same pattern as SRE-853 tier-1 geo-block). Covers Marketplace UI and other Cloudflare-proxied services; does **not** cover Marketplace API.
+- **Phase 1 (immediate):** Block TOR at **Cloudflare** (security rules, same pattern as tier-1 geo-block). Covers Marketplace UI and other Cloudflare-proxied services; does **not** cover Marketplace API.
 - **Phase 2 (follow-up):** Block from **Marketplace API** and other non-Cloudflare endpoints using **this repo** (fetcher + LB blocklist or reference middleware).
 
 This repo provides Phase 2 tooling:
@@ -14,7 +14,7 @@ Enforcement can also be done at the **load balancer** (blocklist file) where SRE
 
 ## Requirements
 
-- Python 3.10+
+- Python 3.12+
 
 ## Install
 
@@ -84,7 +84,8 @@ Set `DD_API_KEY` to emit metrics and events. Fetcher: list size, fetch success/f
 ## Docs
 
 - [Runbook](docs/RUNBOOK.md) – Phase 1 (Cloudflare) and Phase 2 (this repo); refresh interval, list path, disable/rollback, Datadog dashboards/alerts.
-- [Architecture](docs/ARCHITECTURE.md) – Phased rollout (Cloudflare then this repo); ingest → LB blocklist and reference middleware; Meridial (Marketplace) and all prod resources in scope.
+- [Architecture](docs/ARCHITECTURE.md) – Phased rollout (Cloudflare then this repo); ingest → LB blocklist and reference middleware.
+- [Integration](docs/INTEGRATION.md) – How to integrate the fetcher and middleware (cron, Flask/Django, load balancer, Datadog).
 
 ## Tests
 
@@ -112,8 +113,8 @@ black --check .  # check only (CI)
 mypy tor_exit_block
 ```
 
-CI (GitHub Actions) runs on push/PR: Black check, mypy, pytest on Python 3.10–3.12.
+CI (GitHub Actions) runs on push/PR: Black check, mypy, pytest on Python 3.12+.
 
 ## License
 
-Internal use (SRE-1097).
+Internal use.

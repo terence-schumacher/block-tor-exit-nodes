@@ -1,4 +1,4 @@
-# Architecture: TOR Exit Node Blocking (SRE-1097)
+# Architecture: TOR Exit Node Blocking
 
 ## Goal
 

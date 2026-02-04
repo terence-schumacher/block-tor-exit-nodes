@@ -1,4 +1,4 @@
-# Runbook: TOR Exit Node Blocking (SRE-1097)
+# Runbook: TOR Exit Node Blocking
 
 ## Overview
 
