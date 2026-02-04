@@ -23,11 +23,26 @@ pip install -e .
 # or with dev deps (pytest, flask): pip install -e ".[dev]"
 ```
 
+## Environment (.env)
+
+The project loads a `.env` file from the current working directory when the package is imported. Copy `.env.example` to `.env` and set variables as needed.
+
+| Variable | Used by | Description |
+|----------|---------|--------------|
+| `TOR_LIST_OUTPUT_DIR` | Fetcher | Output directory for blocklist (default: `./data`) |
+| `DD_API_KEY` | Fetcher, middleware | Datadog API key (optional; no-op if unset) |
+| `TOR_LIST_PATH` | Example app | Path to blocklist file |
+| `TOR_BLOCK_MONITOR_ONLY` | Example app | Set to `1` for monitor-only (log, don't 403) |
+| `PORT` | Example app | Example server port (default: `3000`) |
+
+`.env` is gitignored; use `.env.example` as a template.
+
 ## Quick start
 
 ```bash
-tor-exit-fetch                    # fetch list → data/tor-exit-nodes.txt
-python example_app.py             # example server with middleware (optional)
+cp .env.example .env   # optional: edit .env with your settings
+tor-exit-fetch         # fetch list → data/tor-exit-nodes.txt
+python example_app.py  # example server with middleware (optional)
 ```
 
 ## Usage
@@ -39,7 +54,7 @@ tor-exit-fetch
 # or: python -m tor_exit_block.fetcher
 ```
 
-Output: `data/tor-exit-nodes.txt` (or set `TOR_LIST_OUTPUT_DIR`). Schedule hourly (see [docs/RUNBOOK.md](docs/RUNBOOK.md)).
+Output: `data/tor-exit-nodes.txt` (or set `TOR_LIST_OUTPUT_DIR` in env or `.env`). Schedule hourly (see [docs/RUNBOOK.md](docs/RUNBOOK.md)).
 
 ### Middleware (WSGI)
 

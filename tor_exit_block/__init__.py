@@ -5,6 +5,10 @@ Block TOR exit nodes.
 - Middleware: use TorExitBlockMiddleware (WSGI) or wrap_flask_app (Flask)
 """
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 from .parser import parse_tor_exit_list, is_valid_ip, TOR_LIST_URL
 from .list_store import read_list_from_file, write_list_to_file
 from .client_ip import get_client_ip, ClientIpOptions

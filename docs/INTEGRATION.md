@@ -10,6 +10,16 @@ This document describes how to integrate the TOR exit block **fetcher** and **mi
 - Network access to `https://www.dan.me.uk/torlist/?exit` from the host that runs the fetcher
 - (Optional) Datadog API key (`DD_API_KEY`) for metrics and events
 
+## Environment and .env
+
+The package loads a **`.env` file** from the current working directory when `tor_exit_block` is first imported. Use this for local development or any run where you want to avoid exporting variables in the shell.
+
+1. Copy `.env.example` to `.env`.
+2. Set variables in `.env` (see table in [README](../README.md#environment-env)).
+3. Run `tor-exit-fetch` or your app; variables are applied automatically.
+
+`.env` is gitignored. In production, set environment variables normally (e.g. systemd, container env, or a secret manager); `.env` is optional and not required.
+
 ---
 
 ## 1. Fetcher integration
