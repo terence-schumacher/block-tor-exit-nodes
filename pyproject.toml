@@ -16,7 +16,9 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest>=7.0",
-    "flask>=3.0",
+    "pytest-asyncio>=0.24",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
     "mypy>=1.0",
     "black>=24.0",
     "types-requests>=2.28",
@@ -32,6 +34,7 @@ include = ["tor_exit_block*"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+asyncio_mode = "auto"
 markers = [
     "integration: tests that use real I/O and a local stub HTTP server",
     "e2e: end-to-end tests (fetch → app → block/allow)",

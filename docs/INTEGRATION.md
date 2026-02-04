@@ -72,9 +72,28 @@ Output (by default):
 
 ---
 
-## 2. Middleware integration (WSGI apps)
+## 2. Middleware integration (FastAPI or WSGI)
 
 Use the middleware for apps that are **not** behind a load balancer that already enforces the blocklist (e.g. Marketplace API, internal APIs).
+
+### FastAPI (recommended)
+
+```python
+from fastapi import FastAPI
+from tor_exit_block import add_tor_exit_block_middleware
+
+app = FastAPI()
+# ... define routes ...
+
+add_tor_exit_block_middleware(
+    app,
+    list_path="/path/to/tor-exit-nodes.txt",
+    refresh_interval_seconds=3600,
+    trusted_proxy_count=1,
+)
+```
+
+Run with: `uvicorn app:app --host 0.0.0.0 --port 8000`
 
 ### Wrap a generic WSGI app
 
@@ -83,23 +102,6 @@ from tor_exit_block.middleware import TorExitBlockMiddleware
 
 app = TorExitBlockMiddleware(
     your_wsgi_app,
-    list_path="/path/to/tor-exit-nodes.txt",
-    refresh_interval_seconds=3600,
-    trusted_proxy_count=1,
-)
-```
-
-### Flask
-
-```python
-from flask import Flask
-from tor_exit_block.middleware import TorExitBlockMiddleware
-
-app = Flask(__name__)
-# ... routes ...
-
-app.wsgi_app = TorExitBlockMiddleware(
-    app.wsgi_app,
     list_path="/path/to/tor-exit-nodes.txt",
     refresh_interval_seconds=3600,
     trusted_proxy_count=1,

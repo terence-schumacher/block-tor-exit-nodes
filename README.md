@@ -1,6 +1,8 @@
 # block-tor-exit-nodes
 
-Block app access from known TOR exit nodes for production. **Phased rollout:**
+Block app access from known TOR exit nodes for production. Blocking is conducted via two phases.
+
+### **Phased rollout:**
 
 - **Phase 1 (immediate):** Block TOR at **Cloudflare** (security rules, same pattern as tier-1 geo-block). Covers Marketplace UI and other Cloudflare-proxied services; does **not** cover Marketplace API.
 - **Phase 2 (follow-up):** Block from **Marketplace API** and other non-Cloudflare endpoints using **this repo** (fetcher + LB blocklist or reference middleware).
@@ -10,7 +12,7 @@ This repo provides Phase 2 tooling:
 1. **Fetcher** – Fetches the dan.me.uk exit list, parses it, and writes a one-IP-per-line file for load balancers and the reference middleware.
 2. **Reference middleware** – WSGI middleware for apps not behind Cloudflare (e.g. Marketplace API); checks client IP against the list and returns 403 when matched.
 
-Enforcement can also be done at the **load balancer** (blocklist file) where SRE controls the LB. No allowlisting of TOR exit nodes for production.
+3. (STRETCH) Enforcement can also be done at the **load balancer** (blocklist file) where SRE controls the LB. No allowlisting of TOR exit nodes for production.
 
 ## Requirements
 
@@ -20,7 +22,7 @@ Enforcement can also be done at the **load balancer** (blocklist file) where SRE
 
 ```bash
 pip install -e .
-# or with dev deps (pytest, flask): pip install -e ".[dev]"
+# or with dev deps (pytest, fastapi, uvicorn): pip install -e ".[dev]"
 ```
 
 ## Environment (.env)
@@ -56,33 +58,33 @@ tor-exit-fetch
 
 Output: `data/tor-exit-nodes.txt` (or set `TOR_LIST_OUTPUT_DIR` in env or `.env`). Schedule hourly (see [docs/RUNBOOK.md](docs/RUNBOOK.md)).
 
-### Middleware (WSGI)
+### Middleware (WSGI or ASGI)
 
-Wrap any WSGI app:
+**FastAPI (recommended):**
 
 ```python
-from tor_exit_block.middleware import TorExitBlockMiddleware
+from fastapi import FastAPI
+from tor_exit_block import add_tor_exit_block_middleware
 
-# Wrap your WSGI app
-app = TorExitBlockMiddleware(
-    your_wsgi_app,
+app = FastAPI()
+add_tor_exit_block_middleware(
+    app,
     list_path="./data/tor-exit-nodes.txt",
     refresh_interval_seconds=3600,
     trusted_proxy_count=1,
 )
 ```
 
-**Flask:**
+**WSGI (Gunicorn, uWSGI, etc.):**
 
 ```python
-from flask import Flask
 from tor_exit_block.middleware import TorExitBlockMiddleware
 
-app = Flask(__name__)
-app.wsgi_app = TorExitBlockMiddleware(
-    app.wsgi_app,
+app = TorExitBlockMiddleware(
+    your_wsgi_app,
     list_path="./data/tor-exit-nodes.txt",
     refresh_interval_seconds=3600,
+    trusted_proxy_count=1,
 )
 ```
 
@@ -100,7 +102,7 @@ Set `DD_API_KEY` to emit metrics and events. Fetcher: list size, fetch success/f
 
 - [Runbook](docs/RUNBOOK.md) – Phase 1 (Cloudflare) and Phase 2 (this repo); refresh interval, list path, disable/rollback, Datadog dashboards/alerts.
 - [Architecture](docs/ARCHITECTURE.md) – Phased rollout (Cloudflare then this repo); ingest → LB blocklist and reference middleware.
-- [Integration](docs/INTEGRATION.md) – How to integrate the fetcher and middleware (cron, Flask/Django, load balancer, Datadog).
+- [Integration](docs/INTEGRATION.md) – How to integrate the fetcher and middleware (cron, FastAPI/Django, load balancer, Datadog).
 
 ## Tests
 

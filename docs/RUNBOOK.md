@@ -88,7 +88,20 @@ The fetcher outputs one IP per line. LBs that support "list of IPs" (e.g. HAProx
 For apps not behind SRE-controlled edge or LB:
 
 1. Install: `pip install -e .` (or use this repo).
-2. Wrap your WSGI app with `TorExitBlockMiddleware`:
+2. **FastAPI:** Add the ASGI middleware with `add_tor_exit_block_middleware(app, list_path="...")`. Run with uvicorn.
+3. **WSGI:** Wrap your WSGI app with `TorExitBlockMiddleware(your_wsgi_app, list_path="...")`.
+
+**FastAPI:**
+
+```python
+from fastapi import FastAPI
+from tor_exit_block import add_tor_exit_block_middleware
+
+app = FastAPI()
+add_tor_exit_block_middleware(app, list_path="/path/to/tor-exit-nodes.txt")
+```
+
+**WSGI (e.g. Gunicorn):**
 
 ```python
 from tor_exit_block.middleware import TorExitBlockMiddleware
@@ -102,20 +115,10 @@ app = TorExitBlockMiddleware(
 )
 ```
 
-**Flask:**
-
-```python
-from flask import Flask
-from tor_exit_block.middleware import TorExitBlockMiddleware
-
-app = Flask(__name__)
-app.wsgi_app = TorExitBlockMiddleware(app.wsgi_app, list_path="/path/to/tor-exit-nodes.txt")
-```
-
-3. **list_path:** Path to the one-IP-per-line file (same as fetcher output).
-4. **refresh_interval_seconds:** How often to re-read the file (default 3600 = 1 hour).
-5. **trusted_proxy_count:** Number of trusted proxies for X-Forwarded-For (default 1).
-6. **monitor_only:** If `True`, log would-be blocks but do not return 403 (for rollout).
+4. **list_path:** Path to the one-IP-per-line file (same as fetcher output).
+5. **refresh_interval_seconds:** How often to re-read the file (default 3600 = 1 hour).
+6. **trusted_proxy_count:** Number of trusted proxies for X-Forwarded-For (default 1).
+7. **monitor_only:** If `True`, log would-be blocks but do not return 403 (for rollout).
 
 ### Allowlisting
 

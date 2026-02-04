@@ -1,4 +1,4 @@
-"""Tests for TorExitBlockMiddleware."""
+"""Tests for TorExitBlockMiddleware (WSGI) and TorExitBlockASGIMiddleware (ASGI)."""
 
 import os
 import tempfile
@@ -6,7 +6,11 @@ from unittest.mock import patch, MagicMock
 
 import pytest
 
-from tor_exit_block.middleware import TorExitBlockMiddleware, wrap_flask_app
+from tor_exit_block.middleware import (
+    TorExitBlockMiddleware,
+    TorExitBlockASGIMiddleware,
+    add_tor_exit_block_middleware,
+)
 
 # Reset module-level cache before tests that rely on file content
 _cached_set = None
@@ -148,17 +152,68 @@ class TestTorExitBlockMiddleware:
 
         mock_emit.assert_called_once_with(client_ip="10.0.0.99", path="/api/bar")
 
-    def test_wrap_flask_app_returns_middleware(self, wsgi_app, list_file):
-        """wrap_flask_app(wsgi_app, ...) returns a TorExitBlockMiddleware wrapping the app."""
+    @pytest.mark.asyncio
+    async def test_asgi_middleware_blocks_ip(self, list_file):
+        """TorExitBlockASGIMiddleware blocks request when client IP is in list."""
         _clear_middleware_cache()
-        wrapped = wrap_flask_app(wsgi_app, list_path=list_file)
-        assert isinstance(wrapped, TorExitBlockMiddleware)
-        start_response = MagicMock()
-        environ = {"REMOTE_ADDR": "192.168.1.100", "PATH_INFO": "/"}
+        sent_events = []
+
+        async def mock_app(scope, receive, send):
+            await send({"type": "http.response.start", "status": 200, "headers": []})
+            await send({"type": "http.response.body", "body": b"OK"})
+
+        async def capture_send(event):
+            sent_events.append(event)
+
+        middleware = TorExitBlockASGIMiddleware(mock_app, list_path=list_file)
+        scope = {
+            "type": "http",
+            "path": "/",
+            "client": ("192.168.1.100", 12345),
+            "headers": [],
+        }
+
+        async def noop_receive():
+            return {"type": "http.disconnect"}
+
         with patch("tor_exit_block.middleware.emit_block_event"):
-            result = list(wrapped(environ, start_response))
-        start_response.assert_called_once_with(
-            "403 Forbidden",
-            [("Content-Type", "text/plain; charset=utf-8")],
-        )
-        assert result == [b"Access denied."]
+            await middleware(scope, noop_receive, capture_send)
+
+        assert len(sent_events) == 2
+        assert sent_events[0]["type"] == "http.response.start"
+        assert sent_events[0]["status"] == 403
+        assert sent_events[1]["type"] == "http.response.body"
+        assert sent_events[1]["body"] == b"Access denied."
+
+    @pytest.mark.asyncio
+    async def test_asgi_middleware_allows_ip(self, list_file):
+        """TorExitBlockASGIMiddleware passes through when client IP not in list."""
+        _clear_middleware_cache()
+        sent_events = []
+
+        async def mock_app(scope, receive, send):
+            await send({"type": "http.response.start", "status": 200, "headers": []})
+            await send({"type": "http.response.body", "body": b"OK"})
+
+        async def capture_send(event):
+            sent_events.append(event)
+
+        middleware = TorExitBlockASGIMiddleware(mock_app, list_path=list_file)
+        scope = {"type": "http", "path": "/", "client": ("10.0.0.1", 12345), "headers": []}
+
+        async def noop_receive():
+            return {"type": "http.disconnect"}
+
+        await middleware(scope, noop_receive, capture_send)
+
+        assert sent_events[0]["status"] == 200
+        assert sent_events[1]["body"] == b"OK"
+
+    def test_add_tor_exit_block_middleware_adds_middleware(self, list_file):
+        """add_tor_exit_block_middleware(app, ...) adds TorExitBlockASGIMiddleware to FastAPI app."""
+        from fastapi import FastAPI
+
+        _clear_middleware_cache()
+        app = FastAPI()
+        add_tor_exit_block_middleware(app, list_path=list_file)
+        assert any(m.cls == TorExitBlockASGIMiddleware for m in app.user_middleware)

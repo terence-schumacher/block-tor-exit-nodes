@@ -32,7 +32,7 @@ def get_client_ip(
     Return the client IP for the request.
     Order: X-Forwarded-For (rightmost after trusted proxies), then X-Real-IP, then REMOTE_ADDR.
 
-    Can be called with WSGI environ, or with headers/remote_addr explicitly (e.g. for Flask request).
+    Can be called with WSGI environ, or with headers/remote_addr explicitly (e.g. for ASGI scope).
     """
     opts = options or ClientIpOptions()
     if environ is not None:
